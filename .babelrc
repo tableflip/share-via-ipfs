@@ -1,0 +1,15 @@
+{
+  "presets": [
+    [ "env", {
+      "useBuiltins": true,
+      "targets": {
+        "browsers": ["last 2 versions", "safari >= 7"]
+      }
+    }],
+    "preact"
+  ],
+  "plugins": [
+    "transform-class-properties",
+    ["transform-react-jsx", { "pragma":"preact.h" }]
+  ]
+}

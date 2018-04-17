@@ -1,0 +1,19 @@
+@import "tachyons";
+@import "./ball-scale-pulse.css";
+
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+}
+
+html {
+  background: #041727;
+}
+
+body {
+  background: url('../img/ipfs-starfield.png') no-repeat;
+  background-size: cover;
+}
