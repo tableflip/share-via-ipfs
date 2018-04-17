@@ -3,8 +3,8 @@
   "name": "share-via-ipfs",
   "version": "0.1.0",
   "scripts": {
-    "start": "parcel src/index.html",
     "test": "standard src",
+    "start": "parcel --public-url ./ src/index.html",
     "build": "parcel build --public-url ./ src/index.html",
     "deploy": "ipfs add -r -q ./dist | tail -n1 >versions/current; cat versions/current >>versions/history; echo http://ipfs.io/ipfs/`cat versions/current`"
   },

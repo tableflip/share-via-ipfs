@@ -122,12 +122,31 @@ const addFilesHoc = (Component) => (
         }
         rootNode = await this.ipfs.object.patch.addLink(rootNode.toJSON().multihash, link)
       }
-      console.log('rootNode', rootNode.toJSON())
+
+      this.preloadAtGateway(rootNode.toJSON())
+
       // All links added. The hash for the rootNode is the address for our batch of files.
       return {
         hash: rootNode.toJSON().multihash,
         node: rootNode.toJSON()
       }
+    }
+
+    // Peer all the things.
+    async preloadAtGateway (rootNode) {
+      const url = `https://ipfs.io/ipfs/${rootNode.multihash}`
+      return window.fetch(url, {
+        method: 'HEAD'
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Gateway response was not ok')
+          } else {
+            console.log('Prefetched', url)
+          }
+        }).catch((err) => {
+          console.log('Failed to pre-fetch snapshot', url, err)
+        })
     }
 
     render (props, {fileRefs, ipfsPathMap, shareStatus}) {
