@@ -1,47 +1,49 @@
 import preact from 'preact'
-import getIpfs from 'window.ipfs-fallback'
 
 import GetFiles from './GetFiles.jsx'
+import withIpfs from './IpfsContainer.jsx'
 
 const getFilesHoc = (Component) => (
   class GetFilesContainer extends preact.Component {
-
-    state = {
-      dagNode: null,
-      ipfsState: 'connecting'
+    constructor (props) {
+      super(props)
+      this.nextId = 0
+      this.state = {
+        rootNode: null,
+        ipfsState: 'connecting'
+      }
     }
 
-    ipfs = null
+    componentDidMount () {
+      this.getRootNodeFromIpfs()
+    }
 
-    async componentWillMount () {
-      const {hash} = this.props
+    componentDidUpdate () {
+      this.getRootNodeFromIpfs()
+    }
+
+    getRootNodeFromIpfs = async () => {
+      if (this.state.ipfsState !== 'connecting') return // already run so bail
+      const {hash, ipfs} = this.props
       if (!hash) return console.log('no hash found')
+      if (!ipfs) return console.log('waiting for ipfs')
 
-      this.ipfs = await getIpfs({
-        ipfs: {
-          config: {
-            Addresses: {
-              Swarm: [
-                '/dns4/ws-star.discovery.libp2p.io/tcp/443/wss/p2p-websocket-star'
-              ]
-            }
-          }
-        }
-      })
       this.setState({
         ipfsState: 'getting'
       })
-      const node = await this.ipfs.object.get(hash)
+
+      const rootNode = await ipfs.object.get(hash)
+
       this.setState({
-        dagNode: node.toJSON(),
+        rootNode: rootNode.toJSON(),
         ipfsState: 'done'
       })
     }
 
-    render (props, {dagNode, ipfsState}) {
-      return  <Component dagNode={dagNode} ipfsState={ipfsState} />
+    render (props, {rootNode, ipfsState}) {
+      return  <Component rootNode={rootNode} ipfsState={ipfsState} />
     }
   }
 )
 
-export default getFilesHoc(GetFiles)
+export default withIpfs(getFilesHoc(GetFiles))

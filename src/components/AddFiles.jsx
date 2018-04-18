@@ -2,7 +2,7 @@ import preact from 'preact'
 import FileItem from './FileItem.jsx'
 
 export default class AddFiles extends preact.Component {
-  render ({fileRefs, ipfsPathMap, shareStatus, onAddFiles, onRemoveFile, onShare}) {
+  render ({fileRefs, canShare, rootNode, onAddFiles, onRemoveFile, onShare}) {
     return (
       <section className='db mw6 ba b--gray bg-white avenir br2'>
         <h1 className='ma0 ph3 pv4 f4 fw5 navy'>
@@ -18,24 +18,28 @@ export default class AddFiles extends preact.Component {
             <div className='pl3 pv2 f6 silver bg-light-gray'>added so far...</div>
           )}
           {fileRefs.map((fileRef) => {
-            const ipfsRef = ipfsPathMap[fileRef.name]
             return (
-              <FileItem fileRef={fileRef} ipfsRef={ipfsRef}>
-                <div className='dtc f4 red v-mid glow pointer pa2' style={{width: '20px'}} onClick={() => onRemoveFile(fileRef)}>×</div>
+              <FileItem fileRef={fileRef}>
+                {rootNode ? null : (
+                  <div
+                    style={{width: '20px'}}
+                    className='dtc f4 red v-mid glow pointer pa2'
+                    onClick={() => onRemoveFile(fileRef)}>×</div>
+                )}
               </FileItem>
             )
           })}
-          {fileRefs.length === 0 ? null : (
+          {!canShare ? null : (
             <div className='bt b--light-gray bg-near-white tc'>
-              {shareStatus ? (
+              {rootNode ? (
                 <label className='db w-90 center pt3 pb4'>
                   <span className='db f6 tl pl2 pb2'>
                     Share link
                   </span>
                   <input
                     type='url'
-                    value={window.location + shareStatus.hash}
-                    className='db input-reset pl2 bn f7 w-100 avenir overflow-auto' />
+                    value={window.location + rootNode.multihash}
+                    className='db pl2 pv2 bn f7 w-100 avenir input-reset' />
                 </label>
               ) : (
                 <div className='pv4'>

@@ -9,17 +9,17 @@ const humansize = filesize.partial({round: 0})
 export default class GetFiles extends preact.Component {
 
   downloadAll = () => {
-    const {dagNode} = this.props
-    if (!dagNode) return
-    dagNode.links.forEach((dagLink, i) => {
+    const {rootNode} = this.props
+    if (!rootNode) return
+    rootNode.links.forEach((dagLink, i) => {
       const el = document.getElementById(dagLink.multihash)
       // Without the timeout, chrome will only download the last item.
       window.setTimeout(() => el.click(), (i+1) * 200)
     })
   }
 
-  render ({dagNode, ipfsState}) {
-    return !dagNode ? (
+  render ({rootNode, ipfsState}) {
+    return !rootNode ? (
       <section className='db mw6 pv5 tc white f3 avenir br2 bg-black-50' >
         <LoadingMsg ipfsState={ipfsState} />
       </section>
@@ -30,9 +30,9 @@ export default class GetFiles extends preact.Component {
         </h1>
         <div>
           <div className='pl3 pv2 f6 silver bg-light-gray'>
-            {dagNode.links.length} files - {humansize(dagNode.size)}
+            {rootNode.links.length} files - {humansize(rootNode.size)}
           </div>
-          {!dagNode ? null : dagNode.links.map((dagLink) => (
+          {!rootNode ? null : rootNode.links.map((dagLink) => (
             <FileItem fileRef={dagLink} ipfsRef={dagLink}>
               <a
                 native

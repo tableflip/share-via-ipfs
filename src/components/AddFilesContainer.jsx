@@ -1,34 +1,18 @@
 import preact from 'preact'
-import getIpfs from 'window.ipfs-fallback'
-import fileReaderStream from 'filereader-stream'
 
 import AddFiles from './AddFiles.jsx'
-import GetFiles from './GetFiles.jsx'
+import withIpfs from './IpfsContainer.jsx'
 
 const addFilesHoc = (Component) => (
   class AddFilesContainer extends preact.Component {
-
-    state = {
-      fileRefs: [],
-      ipfsPathMap: {},
-      shareStatus: null,
-      ipfsStatus: 'connecting'
-    }
-
-    ipfs = null
-
-    async componentWillMount () {
-      this.ipfs = await getIpfs({
-        ipfs: {
-          config: {
-            Addresses: {
-              Swarm: [
-                '/dns4/ws-star.discovery.libp2p.io/tcp/443/wss/p2p-websocket-star'
-              ]
-            }
-          }
-        }
-      })
+    constructor (props) {
+      super(props)
+      this.nextId = 0
+      this.state = {
+        files: [],
+        ipfsRefMap: {},
+        rootNode: null
+      }
     }
 
     addFiles = (evt) => {
@@ -36,41 +20,37 @@ const addFilesHoc = (Component) => (
       evt.stopPropagation()
 
       const fileList = evt && evt.target && evt.target.files
-      console.log(fileList)
+      console.log('adding', fileList)
       if (!fileList) return
 
-      const fileRefs = []
-      for (let file of fileList) { // fileList is not array
-        fileRefs.push(file)
+      const files = []
+      for (let fileRef of fileList) {
+        fileRef.id = this.nextId++
+        files.push(fileRef)
       }
       this.setState(state => {
         return {
-          fileRefs: state.fileRefs.concat(fileRefs)
+          files: state.files.concat(files)
         }
       })
-      this.addFilesToIpfs(fileRefs)
+      window.setTimeout(() => this.addFilesToIpfs(files), 500)
     }
 
-    addFilesToIpfs = async (fileRefs) => {
-      // build up a map of path to ipfsRef as they are added.
-      // { "my.jpeg": { path: "/my.jpeg", hash: "QmHash"} ... }
-      const ipfsPathMap = {}
-
-      for (let fileRef of fileRefs) {
-        // const path = `/${fileRef.name}`
-        const content = await this.fileToBuffer(fileRef)
-        const [ipfsRef] = await this.ipfs.files.add(content)
-
-        console.log(fileRef.name, ipfsRef)
-
-        ipfsPathMap[fileRef.name] = ipfsRef
+    addFilesToIpfs = async (files) => {
+      for (let file of files) {
+        const ipfsRef = await this.addFileToIpfs(file)
+        this.setState(s => {
+          const ipfsRefMap = Object.assign({}, s.ipfsRefMap)
+          ipfsRefMap[file.id] = ipfsRef
+          return {ipfsRefMap}
+        })
       }
+    }
 
-      this.setState(state => {
-        return {
-          ipfsPathMap: Object.assign({}, state.ipfsPathMap, ipfsPathMap)
-        }
-      })
+    addFileToIpfs = async (file) => {
+      const content = await this.fileToBuffer(file)
+      const [ipfsRef] = await this.props.ipfs.files.add(content)
+      return ipfsRef
     }
 
     fileToBuffer (file) {
@@ -86,54 +66,46 @@ const addFilesHoc = (Component) => (
 
     removeFile = (file) => {
       this.setState(state => {
-        const fileRefs = state.fileRefs.filter(f => f !== file)
-        const ipfsPathMap = Object.assign({}, state.ipfsPathMap)
-        delete ipfsPathMap[file.name]
-        return { fileRefs, ipfsPathMap }
+        const files = state.files.filter(f => f.id !== file.id)
+        const ipfsRefMap = Object.assign({}, state.ipfsRefMap)
+        delete ipfsRefMap[file.id]
+        return { files, ipfsRefMap }
       })
     }
 
-    // Copy the hashes into a new shared directory, return stat of dir. Use hash as share link.
     shareFiles = async () => {
-      const filenames = Object.keys(this.state.ipfsPathMap)
-      // const dir = new Date().toISOString().replace(/[:\.]/g, '-')
-      // const prefix = `/shared/${dir}`
       try {
-        const shareStatus = await this.shareViaDagApi(filenames, this.state.ipfsPathMap)
-        // await this.ipfs.files.mkdir(prefix, {parents: true})
-        // const shareStatus = await this.ipfs.files.stat(prefix)
-        this.setState({shareStatus})
-
+        const rootNode = await this.shareViaDagApi()
+        this.prefetchAtGateway(rootNode)
+        this.setState({rootNode})
       } catch (err) {
         return console.log(err)
       }
     }
 
-    shareViaDagApi = async (filenames, ipfsPathMap) => {
-      // update rootNode as we add a link to each file.
-      let rootNode = await this.ipfs.object.new('unixfs-dir')
+    shareViaDagApi = async () => {
+      const {ipfs} = this.props
+      const {files, ipfsRefMap} = this.state
 
-      for (let filename of filenames) {
-        const ipfsRef = this.state.ipfsPathMap[filename]
+      let rootNode = await ipfs.object.new('unixfs-dir')
+
+      for (let file of files) {
+        const ipfsRef = ipfsRefMap[file.id]
         const link = {
-          name: filename,
+          name: file.name,
           size: ipfsRef.size,
           multihash: ipfsRef.hash
         }
-        rootNode = await this.ipfs.object.patch.addLink(rootNode.toJSON().multihash, link)
+        // update rootNode as we add a link for each file.
+        rootNode = await ipfs.object.patch.addLink(rootNode.toJSON().multihash, link)
       }
-
-      this.preloadAtGateway(rootNode.toJSON())
 
       // All links added. The hash for the rootNode is the address for our batch of files.
-      return {
-        hash: rootNode.toJSON().multihash,
-        node: rootNode.toJSON()
-      }
+      return rootNode.toJSON()
     }
 
     // Peer all the things.
-    async preloadAtGateway (rootNode) {
+    async prefetchAtGateway (rootNode) {
       const url = `https://ipfs.io/ipfs/${rootNode.multihash}`
       return window.fetch(url, {
         method: 'HEAD'
@@ -149,12 +121,22 @@ const addFilesHoc = (Component) => (
         })
     }
 
-    render (props, {fileRefs, ipfsPathMap, shareStatus}) {
+    render (props, {files, ipfsRefMap, rootNode}) {
+      // merge file info and ipfs info (where available)
+      const fileRefs = files.map(({id, name, size, type}) => {
+        const fileRef = {id, name, size, type}
+        const ipfsRef = ipfsRefMap[id]
+        if (ipfsRef) {
+          fileRef.multihash = ipfsRef.hash
+        }
+        return fileRef
+      })
+      const canShare = fileRefs.length > 0 && fileRefs.every(f => !!f.multihash)
       return (
         <Component
           fileRefs={fileRefs}
-          ipfsPathMap={ipfsPathMap}
-          shareStatus={shareStatus}
+          canShare={canShare}
+          rootNode={rootNode}
           onAddFiles={this.addFiles}
           onRemoveFile={this.removeFile}
           onShare={this.shareFiles} />
@@ -163,4 +145,4 @@ const addFilesHoc = (Component) => (
   }
 )
 
-export default addFilesHoc(AddFiles)
+export default withIpfs(addFilesHoc(AddFiles))
