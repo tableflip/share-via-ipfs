@@ -33,10 +33,22 @@ const addFilesHoc = (Component) => (
           files: state.files.concat(files)
         }
       })
-      window.setTimeout(() => this.addFilesToIpfs(files), 500)
+      this.addFilesToIpfs(files)
+    }
+
+    waitForIpfs = () => {
+      return new Promise((resolve, reject) => {
+        if (this.props.ipfs) return resolve(this.props.ipfs)
+        const intervalId = setInterval(() => {
+          if (!this.props.ipfs) return
+          clearInterval(intervalId)
+          resolve(this.props.ipfs)
+        }, 500)
+      })
     }
 
     addFilesToIpfs = async (files) => {
+      await this.waitForIpfs()
       for (let file of files) {
         const ipfsRef = await this.addFileToIpfs(file)
         this.setState(s => {
@@ -44,6 +56,9 @@ const addFilesHoc = (Component) => (
           ipfsRefMap[file.id] = ipfsRef
           return {ipfsRefMap}
         })
+      }
+      if (this.state.rootNode) {
+        this.shareFiles()
       }
     }
 
@@ -75,7 +90,7 @@ const addFilesHoc = (Component) => (
 
     shareFiles = async () => {
       try {
-        const rootNode = await this.shareViaDagApi()
+        const rootNode = await this.createIpfsRootNode()
         this.prefetchAtGateway(rootNode)
         this.setState({rootNode})
       } catch (err) {
@@ -83,7 +98,7 @@ const addFilesHoc = (Component) => (
       }
     }
 
-    shareViaDagApi = async () => {
+    createIpfsRootNode = async () => {
       const {ipfs} = this.props
       const {files, ipfsRefMap} = this.state
 

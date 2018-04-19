@@ -5,13 +5,16 @@
   "scripts": {
     "test": "standard src",
     "start": "parcel src/index.html",
+    "clean": "rm -rf dist",
     "build": "parcel build --public-url ./ src/index.html",
-    "deploy": "ipfs add -r -q ./dist | tail -n1 >versions/current; cat versions/current >>versions/history; echo http://ipfs.io/ipfs/`cat versions/current`"
+    "deploy": "run-s clean build ipfs",
+    "ipfs": "ipfs add -r -q ./dist | tail -n1 >versions/current; cat versions/current >>versions/history; echo http://ipfs.io/ipfs/`cat versions/current`"
   },
   "devDependencies": {
     "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-preset-env": "^1.6.1",
     "babel-preset-preact": "^1.1.0",
+    "npm-run-all": "^4.1.2",
     "parcel-bundler": "^1.7.0",
     "standard": "^11.0.1"
   },

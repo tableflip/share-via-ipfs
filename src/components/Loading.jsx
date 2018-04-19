@@ -8,7 +8,9 @@ const msgMap = {
 export const LoadingMsg = ({ipfsState}) => {
   return (
     <div className='pv4 tc'>
-      <div className='f3 fw4 pb4'>{msgMap[ipfsState]}</div>
+      {ipfsState ? (
+        <div className='f3 fw4 pb4'>{msgMap[ipfsState]}</div>
+      ) : null}
       <LoadingSpinner />
     </div>
   )
