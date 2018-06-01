@@ -9,10 +9,10 @@ const humansize = filesize.partial({round: 0})
 export default class GetFiles extends preact.Component {
 
   downloadAll = () => {
-    const {rootNode} = this.props
-    if (!rootNode) return
-    rootNode.links.forEach((dagLink, i) => {
-      const el = document.getElementById(dagLink.multihash)
+    const {files} = this.props
+    if (!files) return
+    files.forEach((ipfsFileRef, i) => {
+      const el = document.getElementById(ipfsFileRef.hash)
       // Without the timeout, chrome will only download the last item.
       window.setTimeout(() => el.click(), (i+1) * 200)
     })
@@ -36,8 +36,8 @@ export default class GetFiles extends preact.Component {
             <FileItem fileRef={ipfsFileRef}>
               <a
                 native
-                id={ipfsFileRef.path}
-                download={ipfsFileRef.path}
+                id={ipfsFileRef.hash}
+                download={ipfsFileRef.name}
                 href={`/ipfs/${ipfsFileRef.path}`}
                 className='dtc f4 green v-mid glow pointer pa1' style={{width: '30px'}}>
                 <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='16' height='16'>
