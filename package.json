@@ -21,9 +21,12 @@
   "dependencies": {
     "babel-polyfill": "^6.26.0",
     "core-js": "^2.5.5",
+    "filenamify": "^2.0.0",
+    "filereader-pull-stream": "^1.0.0",
     "filereader-stream": "^1.0.0",
     "filesize": "^3.6.1",
     "history": "^4.7.2",
+    "ipfs": "^0.28.2",
     "linkstate": "^1.1.1",
     "preact": "^8.2.7",
     "preact-render-to-string": "^3.7.0",

@@ -1,5 +1,6 @@
 import preact from 'preact'
-
+import pullFile from 'filereader-pull-stream'
+import filenamify from 'filenamify'
 import AddFiles from './AddFiles.jsx'
 import withIpfs from './IpfsContainer.jsx'
 
@@ -63,21 +64,22 @@ const addFilesHoc = (Component) => (
     }
 
     addFileToIpfs = async (file) => {
-      const content = await this.fileToBuffer(file)
+      const content = pullFile(file)
+      // const content = await this.fileToBuffer(file)
       const [ipfsRef] = await this.props.ipfs.files.add(content)
       return ipfsRef
     }
 
-    fileToBuffer (file) {
-      return new Promise((resolve, reject) => {
-        let reader = new window.FileReader()
-        reader.onerror = reject
-        reader.onloadend = () => {
-           resolve(Buffer.from(reader.result))
-        }
-        reader.readAsArrayBuffer(file)
-      })
-    }
+    // fileToBuffer (file) {
+    //   return new Promise((resolve, reject) => {
+    //     let reader = new window.FileReader()
+    //     reader.onerror = reject
+    //     reader.onloadend = () => {
+    //        resolve(Buffer.from(reader.result))
+    //     }
+    //     reader.readAsArrayBuffer(file)
+    //   })
+    // }
 
     removeFile = (file) => {
       this.setState(state => {
@@ -91,12 +93,33 @@ const addFilesHoc = (Component) => (
     shareFiles = async () => {
       try {
         const rootNode = await this.createIpfsRootNode()
+        // const rootNode = await this.createShareDir()
         this.prefetchAtGateway(rootNode)
         this.setState({rootNode})
       } catch (err) {
         return console.log(err)
       }
     }
+
+    // TODO: why can't I copy CIDs into MFS using `file.cp` ?
+    // createShareDir = async () => {
+    //   const {ipfs} = this.props
+    //   const {files, ipfsRefMap} = this.state
+    //   const sharePath = `/shared/${Date.now()}`
+    //   await ipfs.files.mkdir(sharePath)
+    //
+    //   for (let file of files) {
+    //     const ipfsRef = ipfsRefMap[file.id]
+    //     const from = `${ipfsRef.hash}`
+    //     const to = `${sharePath}/${filenamify(file.name)}`
+    //     console.log('files cp', from, to)
+    //     await ipfs.files.cp([from, to])
+    //   }
+    //
+    //   const stat = ipfs.files.stat(sharePath)
+    //   console.log('files stat', sharePath, stat)
+    //   return stat
+    // }
 
     createIpfsRootNode = async () => {
       const {ipfs} = this.props
@@ -121,7 +144,8 @@ const addFilesHoc = (Component) => (
 
     // Peer all the things.
     async prefetchAtGateway (rootNode) {
-      const url = `https://ipfs.io/ipfs/${rootNode.multihash}`
+      const cid = rootNode.multihash || rootNode.hash
+      const url = `https://ipfs.io/ipfs/${cid}`
       return window.fetch(url, {
         method: 'HEAD'
       })

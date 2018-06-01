@@ -18,7 +18,7 @@ export default class GetFiles extends preact.Component {
     })
   }
 
-  render ({rootNode, ipfsState}) {
+  render ({rootNode, files, ipfsState}) {
     return !rootNode ? (
       <section className='db mw6 pv5 tc white f3 avenir br2 bg-black-50' >
         <LoadingMsg ipfsState={ipfsState} />
@@ -30,15 +30,15 @@ export default class GetFiles extends preact.Component {
         </h1>
         <div>
           <div className='pl3 pv2 f6 silver bg-light-gray'>
-            {rootNode.links.length} files - {humansize(rootNode.size)}
+            {files.length} files - {humansize(rootNode.size)}
           </div>
-          {!rootNode ? null : rootNode.links.map((dagLink) => (
-            <FileItem fileRef={dagLink} ipfsRef={dagLink}>
+          {!files ? null : files.map((ipfsFileRef) => (
+            <FileItem fileRef={ipfsFileRef}>
               <a
                 native
-                id={dagLink.multihash}
-                download={dagLink.name}
-                href={`/ipfs/${dagLink.multihash}`}
+                id={ipfsFileRef.path}
+                download={ipfsFileRef.path}
+                href={`/ipfs/${ipfsFileRef.path}`}
                 className='dtc f4 green v-mid glow pointer pa1' style={{width: '30px'}}>
                 <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='16' height='16'>
                   <path d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z ' />

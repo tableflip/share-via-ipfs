@@ -47,7 +47,7 @@ export default class AddFiles extends preact.Component {
                     </span>
                     <input
                       type='url'
-                      value={window.location + rootNode.multihash}
+                      value={window.location + (rootNode.multihash || rootNode.hash)}
                       className='db pl2 pv2 bn f7 w-100 avenir navy input-reset' />
                   </div>
                 </label>

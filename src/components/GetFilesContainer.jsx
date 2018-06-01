@@ -32,16 +32,23 @@ const getFilesHoc = (Component) => (
         ipfsState: 'getting'
       })
 
-      const rootNode = await ipfs.object.get(hash)
+      const {value: rootNode} = await ipfs.dag.get(hash)
+
+      // https://github.com/ipfs/interface-ipfs-core/issues/284#issuecomment-393931117
+      // const info = await ipfs.stat(hash)
+      // console.log(info)
+
+      const files = await ipfs.ls(hash)
 
       this.setState({
-        rootNode: rootNode.toJSON(),
+        rootNode,
+        files,
         ipfsState: 'done'
       })
     }
 
-    render (props, {rootNode, ipfsState}) {
-      return  <Component rootNode={rootNode} ipfsState={ipfsState} />
+    render (props, {rootNode, files, ipfsState}) {
+      return  <Component rootNode={rootNode} files={files} ipfsState={ipfsState} />
     }
   }
 )
